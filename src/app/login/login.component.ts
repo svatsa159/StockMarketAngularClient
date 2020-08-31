@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-declare var M: any;
+import { AuthService } from '../_services/auth.service';
+import { TokenStorageService } from '../_services/token-storage.service';
+
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
@@ -7,11 +9,43 @@ declare var M: any;
 })
 export class LoginComponent implements OnInit {
 
-  constructor() { }
+  form: any = {};
+  isLoggedIn = false;
+  isLoginFailed = false;
+  errorMessage = '';
+  roles: string[] = [];
+  username = '';
+  constructor(private authService: AuthService, private tokenStorage: TokenStorageService) { }
 
   ngOnInit(): void {
-    const elems = document.querySelectorAll('.dropdown-trigger');
-    M.Dropdown.init(elems);
+    if (this.tokenStorage.getToken()) {
+      this.isLoggedIn = true;
+      this.roles = this.tokenStorage.getUser().Roles;
+      this.username = this.tokenStorage.getUser().sub;
+    }
+  }
+
+  onSubmit(): void {
+    this.authService.login(this.form).subscribe(
+      data => {
+        this.tokenStorage.saveToken(data.accessToken);
+        this.tokenStorage.saveUser(data);
+
+        this.isLoginFailed = false;
+        this.isLoggedIn = true;
+        this.roles = this.tokenStorage.getUser().roles;
+        this.username = this.tokenStorage.getUser().sub;
+        this.reloadPage();
+      },
+      err => {
+        this.errorMessage = err.error.message;
+        this.isLoginFailed = true;
+      }
+    );
+  }
+
+  reloadPage(): void {
+    window.location.reload();
   }
 
 }
